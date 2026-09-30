@@ -1,0 +1,14 @@
+{
+  "name": "deploy-sim-app",
+  "version": "1.0.0",
+  "description": "Sample deployable API for the CI/CD Deploy Simulator",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}
