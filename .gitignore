@@ -4,3 +4,9 @@ build.log
 .DS_Store
 .env
 .env.*
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
