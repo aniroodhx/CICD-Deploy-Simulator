@@ -22,6 +22,9 @@ resource "kubernetes_namespace" "prod" {
 }
 
 resource "kubernetes_deployment" "app" {
+
+  wait_for_rollout = false
+  
   metadata {
     name      = "deploy-sim-app"
     namespace = kubernetes_namespace.prod.metadata[0].name

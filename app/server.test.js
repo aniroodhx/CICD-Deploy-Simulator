@@ -1,4 +1,6 @@
 'use strict';
+// Health requires GREETING to be set, so configure it before the server loads.
+process.env.GREETING = process.env.GREETING || 'test greeting';
 
 const { test } = require('node:test');
 const assert = require('node:assert');
@@ -32,6 +34,18 @@ test('GET /health returns ok when configured', async () => {
   const res = await get('/health');
   assert.strictEqual(res.status, 200);
   assert.strictEqual(res.body.status, 'ok');
+});
+
+test('GET /health returns 503 when GREETING is missing', async () => {
+  const saved = process.env.GREETING;
+  delete process.env.GREETING;
+  try {
+    const res = await get('/health');
+    assert.strictEqual(res.status, 503);
+    assert.strictEqual(res.body.status, 'unhealthy');
+  } finally {
+    process.env.GREETING = saved;
+  }
 });
 
 test('GET /version returns a version', async () => {

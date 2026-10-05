@@ -10,12 +10,15 @@ const http = require('http');
 const PORT = process.env.PORT || 8080;
 const APP_VERSION = process.env.APP_VERSION || 'dev';
 
-// Health depends on config being present. Phase 3 injects failures by
-// unsetting/mis-setting GREETING so the health check goes red on purpose.
-const GREETING = process.env.GREETING || 'Hello from the deploy simulator';
+// Display value only. Falls back so `/` still renders something.
+const GREETING = process.env.GREETING || '(greeting not configured)';
+
+// Health validates the REQUIRED config directly from the environment — not the
+// display fallback above. A silent fallback must never make an unconfigured app
+// look healthy. Phase 3 injects failure by unsetting GREETING.
 
 function isHealthy() {
-  return typeof GREETING === 'string' && GREETING.length > 0;
+  return typeof process.env.GREETING === 'string' && process.env.GREETING.length > 0;
 }
 
 const server = http.createServer((req, res) => {
