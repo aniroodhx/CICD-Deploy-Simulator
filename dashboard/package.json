@@ -1,0 +1,13 @@
+{
+  "name": "deploy-sim-dashboard-api",
+  "version": "1.0.0",
+  "description": "Backend API for the CI/CD Deploy Simulator dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

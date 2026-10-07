@@ -26,9 +26,11 @@ stays up — but your new version is stuck and won't take over.
    ```
 
 ## The lesson
-- A failing **health check** is what stops a bad deploy from taking traffic -
+- A failing **health check** is what stops a bad deploy from taking traffic —
   the probe is doing its job.
 - **Rollback is a first-class response**, not an admission of failure.
-- `kubectl rollout undo` fixes the live cluster fast but drifts from your IaC -
-  reconcile Terraform afterward. (Fast recovery vs. IaC correctness is a real
-  production trade-off.)
+- Rolling back to a **known-good declared state** (re-applying good Terraform
+  config, as `rollback.sh` does) is more reliable than `kubectl rollout undo`.
+  `undo` only steps back ONE revision — if several bad deploys stacked up, the
+  "previous" one may also be broken, so you roll back from bad to bad. Reverting
+  to known-good config always recovers, and keeps IaC and the cluster in sync.

@@ -1,23 +1,28 @@
 #!/usr/bin/env bash
-# Phase 3 - rollback. Reverts the Deployment to its previous healthy revision
-# (the canonical k8s "stop the bleeding" response), then shows status.
+# Phase 3 - rollback. Reliably restores the known-good declared state by
+# re-applying the Terraform defaults (GREETING set, version=local).
+#
+# This is the declarative / GitOps-style rollback: revert to known-good CONFIG
+# rather than `kubectl rollout undo`, whose "previous revision" may itself be bad
+# if several broken deploys stacked up. Bonus: it also fixes IaC drift, so code
+# and cluster agree afterward.
+
 set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "${ROOT}/terraform"
 
-echo "==> Revision history:"
-kubectl -n prod rollout history deploy/deploy-sim-app
+echo "==> Current revision history (for reference):"
+kubectl -n prod rollout history deploy/deploy-sim-app || true
 
-echo "==> Rolling back to the previous revision"
-kubectl -n prod rollout undo deploy/deploy-sim-app
+echo "==> Rolling back: re-applying known-good config (GREETING set, version=local)"
+terraform apply -auto-approve
 
 echo "==> Rollout status:"
-kubectl -n prod rollout status deploy/deploy-sim-app --timeout=60s
+kubectl -n prod rollout status deploy/deploy-sim-app --timeout=90s
 kubectl -n prod get pods
 
 cat <<'EOF'
 
-Rolled back - live pods are healthy again.
-
-NOTE (IaC drift): `kubectl rollout undo` fixed the LIVE cluster, but Terraform
-state still records the broken value. Reconcile IaC so code matches reality:
-  ./scripts/deploy-local.sh        # re-applies the good default config
+Rolled back to the known-good declared state — pods healthy, and Terraform
+state now matches reality (no drift).
 EOF
