@@ -89,21 +89,19 @@ function getPods(res) {
   });
 }
 
-// live GitHub Actions pipeline status
-async function getPipeline(res) {
-  if (!GH_TOKEN) return json(res, 200, { configured: false });
-  const base = `https://api.github.com/repos/${GH_REPO}/actions`;
-  const headers = {
-    Authorization: `Bearer ${GH_TOKEN}`,
-    Accept: 'application/vnd.github+json',
-    'User-Agent': 'deploy-sim-dashboard',
-    'X-GitHub-Api-Version': '2022-11-28',
-  };
+// live GitHub Actions pipeline status 
+// 2 lanes: CI (pipeline.yml) and the automated CI+CD (cicd.yml).
+const LANES = [
+  { file: 'pipeline.yml', label: 'CI - build · test · push image' },
+  { file: 'cicd.yml', label: 'CI+CD - build · test · deploy · health check' },
+];
+
+async function fetchLane(base, headers, file, label) {
   try {
-    const runsR = await fetch(`${base}/runs?per_page=1`, { headers });
-    if (!runsR.ok) return json(res, 502, { error: `GitHub API ${runsR.status}` });
+    const runsR = await fetch(`${base}/workflows/${file}/runs?per_page=1`, { headers });
+    if (!runsR.ok) return { file, label, error: `GitHub API ${runsR.status}` };
     const run = (await runsR.json()).workflow_runs?.[0];
-    if (!run) return json(res, 200, { configured: true, run: null, steps: [] });
+    if (!run) return { file, label, run: null, steps: [] };
 
     const jobsR = await fetch(`${base}/runs/${run.id}/jobs`, { headers });
     const job = (await jobsR.json()).jobs?.[0];
@@ -111,8 +109,9 @@ async function getPipeline(res) {
       .filter((s) => !/^(Set up job|Complete job|Post )/.test(s.name))
       .map((s) => ({ name: s.name, status: s.status, conclusion: s.conclusion }));
 
-    return json(res, 200, {
-      configured: true,
+    return {
+      file,
+      label,
       run: {
         number: run.run_number,
         title: run.display_title || run.name,
@@ -123,10 +122,23 @@ async function getPipeline(res) {
         updated: run.updated_at,
       },
       steps,
-    });
+    };
   } catch (e) {
-    return json(res, 502, { error: `failed to reach GitHub: ${e.message}` });
+    return { file, label, error: e.message };
   }
+}
+
+async function getPipeline(res) {
+  if (!GH_TOKEN) return json(res, 200, { configured: false });
+  const base = `https://api.github.com/repos/${GH_REPO}/actions`;
+  const headers = {
+    Authorization: `Bearer ${GH_TOKEN}`,
+    Accept: 'application/vnd.github+json',
+    'User-Agent': 'deploy-sim-dashboard',
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+  const lanes = await Promise.all(LANES.map((l) => fetchLane(base, headers, l.file, l.label)));
+  return json(res, 200, { configured: true, lanes });
 }
 
 // helpers 

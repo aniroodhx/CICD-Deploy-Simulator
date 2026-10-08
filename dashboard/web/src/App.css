@@ -81,3 +81,8 @@ section h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; 
 @keyframes pulse { 50% { opacity: .55; } }
 
 code { background: var(--panel); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+
+/*  pipeline lanes  */
+.lane { margin-bottom: 18px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+.lane:last-child { margin-bottom: 0; }
+.lane-label { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 8px; }

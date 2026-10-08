@@ -63,6 +63,36 @@ function stepClass(s) {
   return 'skipped';
 }
 
+function Lane({ lane }) {
+  const run = lane.run;
+  return (
+    <div className="lane">
+      <div className="lane-label">{lane.label}</div>
+      {lane.error && <p className="err">{lane.error}</p>}
+      {!lane.error && !run && <p className="muted">No runs yet — push a commit to trigger one.</p>}
+      {run && (
+        <>
+          <div className="run-head">
+            <a href={run.url} target="_blank" rel="noreferrer">#{run.number}</a>
+            <span className="muted">{run.branch}</span>
+            <span className="run-title">{run.title}</span>
+            <span className={`chip ${run.conclusion || run.status}`}>
+              {run.conclusion || run.status}
+            </span>
+          </div>
+          <div className="stages">
+            {lane.steps.map((s, i) => (
+              <div key={i} className={`stage ${stepClass(s)}`} title={s.conclusion || s.status}>
+                {s.name}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function Pipeline() {
   const { data } = usePolled('/api/pipeline', 5000);
   if (!data) return null;
@@ -78,30 +108,10 @@ function Pipeline() {
     );
   }
 
-  const run = data.run;
   return (
     <section className="pipeline">
       <h2>pipeline — GitHub Actions</h2>
-      {!run && <p className="muted">No runs yet — push a commit to trigger one.</p>}
-      {run && (
-        <>
-          <div className="run-head">
-            <a href={run.url} target="_blank" rel="noreferrer">#{run.number}</a>
-            <span className="muted">{run.branch}</span>
-            <span className="run-title">{run.title}</span>
-            <span className={`chip ${run.conclusion || run.status}`}>
-              {run.conclusion || run.status}
-            </span>
-          </div>
-          <div className="stages">
-            {data.steps.map((s, i) => (
-              <div key={i} className={`stage ${stepClass(s)}`} title={s.conclusion || s.status}>
-                {s.name}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+      {data.lanes.map((lane) => <Lane key={lane.file} lane={lane} />)}
     </section>
   );
 }
@@ -140,12 +150,15 @@ export default function App() {
         <span className={`badge ${banner.cls}`}>{banner.text}</span>
       </header>
 
-      <Controls busy={busy} onRun={run} />
-
       <Pipeline />
 
+      <section className="cd">
+        <h2>manual CD — drive it yourself</h2>
+        <Controls busy={busy} onRun={run} />
+      </section>
+
       <section className="pods">
-        <h2>prod namespace</h2>
+        <h2>prod namespace (local kind)</h2>
         {error && <p className="err">{error}</p>}
         {!error && pods.length === 0 && <p className="muted">No pods found.</p>}
         <div className="pod-grid">
