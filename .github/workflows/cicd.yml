@@ -1,0 +1,51 @@
+name: ci-cd
+
+# The automated CI+CD lane: one push runs build -> test -> deploy -> health check,
+# all inside the GitHub runner using a throwaway kind cluster. This is the real
+# pipeline-driven handoff (what "continuous deployment" means), with no laptop
+# and no cloud cost. The cluster is ephemeral - it exists only for this run.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Test
+        working-directory: app
+        run: npm test
+
+      - name: Build image
+        working-directory: app
+        run: docker build -t deploy-sim-app:local .
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: deploysim
+
+      - name: Load image into kind
+        run: kind load docker-image deploy-sim-app:local --name deploysim
+
+      - name: Deploy to prod namespace
+        run: |
+          kubectl create namespace prod --dry-run=client -o yaml | kubectl apply -f -
+          kubectl -n prod apply -f k8s/
+
+      - name: Wait for rollout (health check gates this)
+        run: kubectl -n prod rollout status deploy/deploy-sim-app --timeout=120s
+
+      - name: Verify /health is serving
+        run: |
+          kubectl -n prod port-forward svc/deploy-sim-app 8080:80 &
+          sleep 5
+          curl -fsS localhost:8080/health
+          echo
